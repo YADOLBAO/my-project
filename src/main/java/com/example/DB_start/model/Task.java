@@ -1,5 +1,6 @@
 package com.example.DB_start.model;
 
+import com.example.DB_start.model.enums.TaskStatus;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -27,7 +28,10 @@ public class Task {
 
     private boolean isCompleted;
 
-    private LocalDate createdAt;
+    private LocalDate createdAt = LocalDate.now();
+
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status;
 
     @ManyToOne
     @JoinColumn(name = "project_id")
