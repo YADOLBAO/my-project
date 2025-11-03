@@ -3,6 +3,9 @@ package com.example.DB_start.service;
 import com.example.DB_start.model.Project;
 import com.example.DB_start.repository.ProjectRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -14,39 +17,76 @@ public class ProjectService {
 
     private final ProjectRepository repository;
 
-    public void saveProject(Project project){
-        project.setCreatedAt(LocalDate.now());
+    //Сохранение проекта
+    public void saveProject(Project project) {
         repository.save(project);
     }
 
+    //Поиск всех проектов
     public List<Project> findAllProjects(){
         return repository.findAll();
     }
 
+    //Постраничный поиск всех проектов
+    public Page<Project> findAllWithPagination(int page, int size){
+        Pageable pageable = PageRequest.of(page, size);
+        return repository.findAll(pageable);
+    }
+
+    //Поиск проекта по id
     public Project findById(Long id){
-        if(id <= 0)
-            return new Project("Проект не найден. Id меньше нуля!");
-        return repository.findById(id).
-                orElse(new Project("Проект с таким id не найден"));
+        return repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Проект с данным id не найден!"));
     }
 
+    //Поиск проекта по статусу
+    public List<Project> findByCompleted(boolean completed){
+        return repository.findByCompleted(completed);
+    }
+
+    //Поиск проекта по описанию или названию
+    public List<Project> findByKeyword(String keyword){
+        return repository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword, keyword);
+    }
+
+    //Поиск по дате создания
+    public List<Project> findByCreatedAt(LocalDate createdAt){
+        return repository.findByCreatedAt(createdAt);
+    }
+
+    //Поиск проекта по дате изменения
+    public List<Project> findByUpdatedAt(LocalDate updatedAt){
+        return repository.findByUpdatedAt(updatedAt);
+    }
+
+    //Частичное обновление проекта
     public boolean updateProject(Project project){
-        if(repository.findById(project.getId()).isPresent()){
-            repository.save(project);
-            return true;
-        }
-        else
-            return false;
+        return repository.findById(project.getId())
+                .map(existingProject -> {
+                    String name = project.getName();
+                    if(name != null && !name.isEmpty())
+                        existingProject.setName(name);
+
+                    String description = project.getDescription();
+                    if(description != null && !description.isEmpty())
+                        existingProject.setDescription(description);
+
+                    existingProject.setUpdatedAt(LocalDate.now());
+                    repository.save(existingProject);
+                    return true;
+                }).
+                orElse(false);
     }
 
+    //Удаление проекта
     public boolean deleteProject(Long id) {
 
-        if (repository.findById(id).isEmpty())
-            return false;
-        else {
-            repository.deleteById(id);
-            return true;
-        }
+        return repository.findById(id)
+                .map(p -> {
+                    repository.delete(p);
+                    return true;
+                })
+                .orElse(false);
 
     }
 }
